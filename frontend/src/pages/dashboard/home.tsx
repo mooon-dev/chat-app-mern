@@ -1,5 +1,5 @@
 import socket from "../../socket";
-import { Image } from "../../components/Image";
+// import { Image } from "../../components/Image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
