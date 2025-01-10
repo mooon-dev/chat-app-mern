@@ -1,57 +1,60 @@
 pipeline {
     agent any
+
+    // Define tools to be installed
+    tools {
+        // Install Node.js tool with a specific version
+        nodejs 'node:latest'
+    }
+
     environment {
-        // Define Docker image names with your Docker Hub username
-        DOCKER_IMAGE_BACKEND = "livhere/chat-app-backend"
-        DOCKER_IMAGE_FRONTEND = "livhere/chat-app-frontend"
+        // JWT_SECRET = 'TestSecreatKey'
+        MONGO_URI = 'mongodb+srv://yadiraelham0:WKamEQsZ5XPm4q0V@cluster0.ke7jv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
     }
     stages {
-        stage('Build Backend') {
-            steps {
-                script {
-                    // Build Docker image for the backend
-                    sh 'docker build -t $DOCKER_IMAGE_BACKEND -f backend/Dockerfile .'
-                }
-            }
+        stage('Checkout') {
+      steps {
+        // Check out the repository from GitHub
+        git branch: 'main', url: 'https://github.com/mooon-dev/chat-app-mern.git'
+      }
         }
-        stage('Build Frontend') {
-            steps {
-                script {
-                    // Build Docker image for the frontend
-                    sh 'docker build -t $DOCKER_IMAGE_FRONTEND -f frontend/Dockerfile .'
-                }
-            }
+
+        stage('Install frontend Dependencies') {
+      steps {
+        // Change to the client directory and install dependencies
+        dir('frontend') {
+          sh 'npm install'
         }
-        stage('Docker Login and Push') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', 
-                                                     usernameVariable: 'DOCKER_USERNAME', 
-                                                     passwordVariable: 'DOCKER_PASSWORD')]) {
-                        // Login to Docker Hub
-                        sh '''
-                            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                        '''
+      }
+        }
 
-                        // Push Docker images to Docker Hub
-                        sh 'docker push $DOCKER_IMAGE_BACKEND'
-                        sh 'docker push $DOCKER_IMAGE_FRONTEND'
+        stage('Build frontend') {
+      steps {
+        // Change to the client directory and run the build command
+        dir('frontend') {
+          sh 'CI=false npm run build'
+        }
+      }
+        }
 
-                        // Logout from Docker Hub
-                        sh 'docker logout'
-                    }
-                }
-            }
+        stage('Install Backend Dependencies') {
+      steps {
+        // Change to the backend directory and install dependencies
+        dir('backend') {
+          sh 'npm install'
+          sh 'export MONGODB_URI=$MONGODB_URI'
+        //   sh 'export TOKEN_KEY=$TOKEN_KEY'
+        }
+      }
         }
     }
+
     post {
-        always {
-            // Clean up containers and images after the pipeline runs
-            sh '''
-                docker ps -q | xargs -r docker stop
-                docker ps -a -q | xargs -r docker rm
-                docker images -q | xargs -r docker rmi -f
-            '''
+        success {
+      echo 'Pipeline completed successfully!'
+        }
+        failure {
+      echo 'Pipeline failed.'
         }
     }
 }
